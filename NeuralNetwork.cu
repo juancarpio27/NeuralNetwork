@@ -102,7 +102,7 @@ void sum_matrix(double *transition, double *gradient, int N, int M){
 	}
 }
 
-void read_file(char *file, unsigned char* buffer,double *transition_matrix_1,double *transition_matrix_2, double *transition_matrix_3){
+void read_file(char *file, unsigned char* buffer,double *transition_matrix_1,double *transition_matrix_2, double *transition_matrix_3, int elements){
 	FILE *f;
 	f = fopen(file, "rb");
 	unsigned char expected_output;
@@ -110,7 +110,14 @@ void read_file(char *file, unsigned char* buffer,double *transition_matrix_1,dou
 
 	float total_time = 0.0;
 
-	while(1 == fread(buffer,PIXELS,1,f) && i < ELEMENTS){
+	while(1 == fread(buffer,PIXELS,1,f) && i < elements){
+
+		float tiempo1;
+		cudaEvent_t inicio1, fin1;
+
+		cudaEventCreate(&inicio1); // Se inicializan
+   		cudaEventCreate(&fin1);
+   		cudaEventRecord( inicio1, 0 );
 
 		expected_output = buffer[0];
 		buffer[0] = 1;
@@ -162,8 +169,17 @@ void read_file(char *file, unsigned char* buffer,double *transition_matrix_1,dou
 		free(output_layer);
 		free(input);
 		free(errors_array);
+
+		cudaEventRecord( fin1, 0); // Se toma el tiempo final.
+   		cudaEventSynchronize( fin1 ); // Se sincroniza
+   		cudaEventElapsedTime( &tiempo1, inicio1, fin1 );
+
+   		total_time += tiempo1;
+		
 	}
 
+	total_time /= elements;
+	printf ("Tiempo promedio por clasificacion: %f\n", total_time);
 }
 
 void init_layer(double *matrix, int N, int M){
@@ -187,9 +203,19 @@ void print_layer(double *matrix, int N, int M){
 	}		
 }
 
-int main(){
+int main(int argc, char *argv[]){
 
 	srand(time(NULL));
+
+	 if ( argc != 2 ) {
+        /* We print argv[0] assuming it is the program name */
+        printf( "Error se debe ejecutar: %s <N>\n", argv[0] );
+        exit(0);
+    }
+
+    int elements = atoi(argv[1]);
+
+    printf("Se va a entrenar con %d elementos\n",elements);
 	
 	double *transition_matrix_1 = (double*)malloc(PIXELS*HIDDEN_LAYER_1*sizeof(double));
 	double *transition_matrix_2 = (double*)malloc((HIDDEN_LAYER_1+1)*HIDDEN_LAYER_2*sizeof(double));
@@ -199,9 +225,22 @@ int main(){
 	init_layer(transition_matrix_2,HIDDEN_LAYER_1+1,HIDDEN_LAYER_2);
 	init_layer(transition_matrix_3,HIDDEN_LAYER_2+1,OUTPUT_LAYER);
 
+	float tiempo1;
+	cudaEvent_t inicio1, fin1;
+
 	unsigned char *buffer = (unsigned char*)malloc(PIXELS*sizeof(unsigned char));
 
-	read_file("data_batch_1.bin",buffer,transition_matrix_1,transition_matrix_2,transition_matrix_3);
+	cudaEventCreate(&inicio1); // Se inicializan
+   	cudaEventCreate(&fin1);
+   	cudaEventRecord( inicio1, 0 );
+
+	read_file("data_batch_1.bin",buffer,transition_matrix_1,transition_matrix_2,transition_matrix_3,elements);
+
+	cudaEventRecord( fin1, 0); // Se toma el tiempo final.
+   	cudaEventSynchronize( fin1 ); // Se sincroniza
+   	cudaEventElapsedTime( &tiempo1, inicio1, fin1 );
+
+   	printf("Tiempo total del programa: %f ms\n", tiempo1);
 
 }
 
