@@ -91,7 +91,6 @@ void process_input(unsigned char *c, double *f, int N){
  * int corresponding to the index of the maximum value
  */
 int max_index(double *f, int N){
-
 	//The max is the first element
 	int max_index = 0;
 	for (int i = 1; i < N; ++ i){
@@ -102,7 +101,6 @@ int max_index(double *f, int N){
 	}
 	//Return the index of the max element
 	return max_index;
-
 }
 
 /*
